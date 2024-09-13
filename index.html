@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>HubSpot to Elementor Form Generator</title>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.5.6/jsoneditor.min.css"
+    />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+      }
+      #downloadBtn,
+      #generateBtn,
+      #fetchFormsBtn {
+        margin-top: 20px;
+        padding: 10px 20px;
+        background-color: #049b6a;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+      #formSelect {
+        width: 300px;
+        margin-top: 20px;
+      }
+      #editorContainer {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        margin-top: 20px;
+      }
+      .jsoneditor {
+        border: 1px solid #ced4da;
+        height: 400px; /* Set a fixed height for the editor */
+        flex: 1 1 45%; /* Flex properties for responsive design */
+        margin: 10px; /* Space between editors */
+      }
+      @media (max-width: 768px) {
+        .jsoneditor {
+          flex-basis: 100%; /* Stack on mobile */
+        }
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsoneditor/9.5.6/jsoneditor.min.js"></script>
+    <script>
+      let formsCache = []; // Cache for forms
+      const workerUrl = 'https://pg-hubspot-formsnew.pathway-group.workers.dev'; // Replace with your Cloudflare Worker URL
+      let hubspotFormDetails = null; // Store HubSpot form details
+
+      async function fetchHubSpotForms() {
+        try {
+          const response = await fetch(`${workerUrl}/?get=forms`, {
+            method: 'GET',
+          });
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+          formsCache = await response.json();
+          populateFormSelect(formsCache);
+        } catch (error) {
+          alert(`Error fetching HubSpot forms: ${error.message}`);
+          console.error('Error fetching HubSpot forms:', error);
+        }
+      }
+
+      function populateFormSelect(forms) {
+        const formSelect = document.getElementById('formSelect');
+        formSelect.innerHTML = ''; // Clear existing options
+        forms.forEach((form) => {
+          const option = document.createElement('option');
+          option.value = form.guid;
+          option.textContent = form.name;
+          formSelect.appendChild(option);
+        });
+      }
+
+      async function generateElementorTemplate() {
+        const selectedFormGuid = document.getElementById('formSelect').value;
+        const selectedForm = formsCache.find(
+          (form) => form.guid === selectedFormGuid
+        );
+
+        if (!selectedForm) {
+          alert('Please select a valid form.');
+          return;
+        }
+
+        const pageTitle =
+          prompt('Enter the page title:', selectedForm.name) ||
+          selectedForm.name;
+        const webhookUrl =
+          prompt('Enter the webhook URL:', '') || 'https://example.com/webhook'; // Default value
+
+        // Define the base template structure
+        const elementorTemplate = {
+          content: [
+            {
+              id: '609ed76b', // Unique ID for the container
+              settings: {
+                content_width: 'full',
+                flex_gap: {
+                  column: '',
+                  row: '',
+                  isLinked: true,
+                  unit: 'px',
+                  size: null,
+                },
+                flex_direction: 'row',
+                flex_justify_content: 'space-between',
+                flex_align_items: 'center',
+                flex_wrap: 'wrap',
+                flex_align_content: 'flex-start',
+                padding_mobile: {
+                  unit: 'px',
+                  top: '0',
+                  right: '0',
+                  bottom: '0',
+                  left: '0',
+                  isLinked: true,
+                },
+              },
+              elements: [
+                {
+                  id: 'title', // Unique ID for heading
+                  settings: {
+                    title: selectedForm.name, // Use the selected form's name as the title
+                    header_size: 'h3',
+                    align: 'left',
+                    typography_typography: 'custom',
+                    typography_font_family: 'Francois One',
+                    typography_font_size: { unit: 'em', size: 2.5, sizes: [] },
+                    typography_font_size_tablet: {
+                      unit: 'em',
+                      size: '',
+                      sizes: [],
+                    },
+                    typography_font_size_mobile: {
+                      unit: 'em',
+                      size: 2,
+                      sizes: [],
+                    },
+                    typography_font_weight: '400',
+                    title_color: '#FFFFFF',
+                    _background_color: '#049B6A',
+                    _padding: {
+                      unit: 'em',
+                      top: '1',
+                      right: '2',
+                      bottom: '1',
+                      left: '2',
+                      isLinked: false,
+                    },
+                    _css_classes: 'titleed0',
+                  },
+                  elements: [],
+                  isInner: false,
+                  widgetType: 'heading',
+                  elType: 'widget',
+                },
+                // Dynamically generated form
+                {
+                  id: 'form_' + selectedForm.guid, // Unique ID for the form
+                  settings: {
+                    form_name: selectedForm.name, // Use the form name from HubSpot
+                    form_fields: selectedForm.formFieldGroups.reduce(
+                      (fields, group) => {
+                        group.fields.forEach((field) => {
+                          if (!field.hidden) {
+                            const fieldElement = createFieldElement(field);
+                            // Set _id fields to empty string
+                            fieldElement._id = ''; // Ensure _id is empty
+                            fields.push(fieldElement);
+                          }
+                        });
+                        return fields;
+                      },
+                      []
+                    ),
+                    success_message: '<p>Thanks for completing the form!</p>',
+                    error_message: 'There was an error submitting the form.',
+                    required_field_message: 'This field is required.',
+                    submit_actions: ['save-to-database', 'email', 'webhook'],
+                    webhooks: webhookUrl,
+                  },
+                  widgetType: 'form',
+                  elType: 'widget',
+                },
+              ],
+              isInner: true,
+              elType: 'container',
+            },
+          ],
+          page_settings: {
+            hide_title: 'yes',
+            custom_css:
+              '.inner-top-main.elementor-sticky--active {\n    box-shadow: 0px 0px 15px -5px rgba(0, 0, 0, 0.16)!important;\n    z-index: 999;\n}\n.titleed h3 {\n    text-decoration-thickness: 7px!important;\n    text-underline-offset: 10px;\n    text-decoration-color: #049b6a!important;\n}\n.inner-top-main {\n    box-shadow: 0px 0px 0 0 rgb(0 0 0 / 0%)!important;\n}\n.e-form__indicators__indicator__progress__meter {\n    padding-left: 6px;\n}\n.ast-container {\n    max-width: 1240px;\n}\n\n.elementor-field-group:not(.elementor-field-type-upload) .elementor-field:not(.elementor-select-wrapper):focus,.elementor-field-group:not(.elementor-field-type-upload) .elementor-field:not(.elementor-select-wrapper):hover, .elementor-field-group .elementor-select-wrapper select:focus, .elementor-field-group .elementor-select-wrapper select:hover{\n    border-color:var(--e-global-color-f37af1a)!important;\ncursor:pointer!important;\n}\n.elementor-field-group > label,.elementor-field-group:hover > input::placeholder {\n    transition:color 120ms linear,opacity 120ms linear;\n}\n.elementor-field-group:hover > input:focus::placeholder {\n    opacity: 1;\n    \n}\n.elementor-field-group:hover > label {\n    color:var(--e-global-color-f37af1a)!important;\n}\n.elementor-field-group.elementor-column {\n    align-items: flex-start!important;\n    align-content: flex-start!important;\n}\n\n\n.elementor-field-group .elementor-field-option input[type="checkbox"],\n.elementor-field-group .elementor-field-option input[type="radio"]{\n\tdisplay: none;\n}\n\n.elementor-field-subgroup.elementor-subgroup-inline {\n    gap:1em 0.5em!important;\n}\nspan.elementor-field-option input[type="checkbox"] + label, span.elementor-field-option input[type="radio"] + label {\n    margin: 0;\n    font-size: 0.9em;\n    padding: 0.5em 0.85em;\n    background-color: #e9ecee;\n    border: 2px solid #cacece;\n    display: inline-flex;\n    position: relative;\n    transition: all 220ms linear;\n    min-width: 40px !important;\n    width: 100% !important;\n    display: flex !important;\n    text-align: center !important;\n    flex-wrap: wrap;\n    flex-direction: row;\n    justify-content: center;\n    align-items: center;\n    align-content: stretch;\n    background-color: #ffffff;\n    border-color: #54595f1f;\n    border-radius: 0.45em;\n    color: gray !important;\n}\nspan.elementor-field-option input[type="radio"] + label:active,\nspan.elementor-field-option input[type="radio"]:checked + label:active, \nspan.elementor-field-option input[type="checkbox"] + label:active,\nspan.elementor-field-option input[type="checkbox"]:checked + label:active {\n\tbox-shadow: 0 1px 2px rgba(0,0,0,0.05), inset 0px 1px 3px rgba(0,0,0,0.0.01);\n}\nspan.elementor-field-option input[type="radio"]:checked + label,\nspan.elementor-field-option input[type="checkbox"]:checked + label {\n\tbackground-color: #049b6a;\n\tborder: 2px solid #adb8c0;\ncursor:pointer;\n\tbox-shadow: 0 1px 2px rgba(0,0,0,0.05), inset 0px -15px 10px -12px rgba(0,0,0,0.05), inset 15px 10px -12px rgba(255,255,255,0.1);\n\tcolor: #fff!important;\n    font-family: inherit;\n}\nspan.elementor-field-option input[type="checkbox"]:hover  + label:after {\n \n}\nspan.elementor-field-option input[type="checkbox"]:checked:hover +label,\nspan.elementor-field-option input[type="radio"]:checked:hover +label{\n    color: #049b6a!important;\n}\nspan.elementor-field-option input[type="checkbox"]:hover + label,\nspan.elementor-field-option input[type="radio"]:hover + label {\n\tbackground-color: #fff;\n\tborder: 2px solid #049b6a!important;\ncursor:pointer;\n\tcolor: #049b6a;\n    font-family: inherit;\n}\nspan.elementor-field-option input[type="radio"]:checked + label:after,\nspan.elementor-field-option input[type="radio"]:checked:hover + label:after,\nspan.elementor-field-option input[type="checkbox"]:checked + label:after,\nspan.elementor-field-option input[type="checkbox"]:checked:hover + label:after {\n    content: \'selected\';\n    font-size: 0.45em;\n    position: absolute;\n    bottom: -50%;\n    left: 0%;\n    transform: translate(-0%, -20%);\n    background-color: #049b6a;\n    border-radius: 3px;\n    text-transform: uppercase;\n    font-family: inherit;\n    letter-spacing: 0.1em;\n    font-weight: 500;\n    color: white;\n    line-height: 1.25;\n    padding: 2px;\n    min-width: 100%;\n}\n\n.elementor-field-group.elementor-column.elementor-field-type-checkbox {\n    border: 2px solid lightgray;\n    border-radius: 1em;\n    padding: 1.65em 1.25em;\n    transition: border 180ms linear 10ms;\n    margin-right: calc(18px / 2);\n    margin-left: calc(18px / 2);\n    margin-bottom: 26px;\n}\n\n.elementor-field-group.elementor-column.elementor-field-type-checkbox:hover {\n    border-color: #049b6a;\n}\n\n.onefifth {\n    display: flex;\n    gap: 0;\n    padding: 0;\n    margin: 0;\n    justify-content: center;\n    flex-wrap: wrap;\n    height: min-content;\n    padding-block-start: 0;\n    padding-block-end: 0;\n    font-size: 10px !important;\n    border-collapse: collapse;\n    max-width: min-content;\n    line-height: 1.5;\n}\n\n\n\n.q13 {\n    font-family: \'Poppins\';\n    font-size: 0.85em;\n    text-wrap: wrap;\n    display: flex;\n    flex-wrap: wrap;\n    flex-direction: row;\n    line-height: 1.35em;\n    color: dimgray;\n}\n.q9 {\n    font-family: \'Poppins\';\n    font-size: 0.65em !important;\n    text-wrap: wrap;\n    display: flex;\n    flex-wrap: wrap;\n    flex-direction: row;\n    line-height: 1.7em;\n    margin-bottom: 16px ! Important;\n    color: dimgray;\n}\n\n .elementor-labels-above .elementor-field-group > label {\n    padding-bottom: 16px;\n}\n\n.elementor-field-type-html label, label.elementor-field-label{\n    font-size: 1.5em !important;\n    line-height: 1em !important;\n}\n\n\n\n#initialAssessmentEnglish .eng-test.q14 {\n    font-weight: 600;\n}\n\n#initialAssessmentEnglish .eng-test.q14 i {\n    font-weight: 300 !important;\n    line-height: 3em;\n}\n\n#initialAssessmentEnglish .eng-test.q14 ul {\n    margin-block-start: 8px !important;\n    margin-block-end: 8px !important;\n    font-weight: 400;\n}\n\n\n\nform#initialAssessmentMaths,form#initialAssessmentEnglish {\n    min-height: 350px;\n    display: flex;\n    flex-direction: column;\n    flex-wrap: wrap;\n    justify-content: space-between;\n\t    align-content: stretch;\n    align-items: stretch;\n}\n\n.e-form__step:not(.elementor-hidden) {\n    display: flex;\n    flex-wrap: wrap;\n    flex-direction: row;\n    justify-content: space-between;\n    align-items: center;\n    min-height: 300px;\n    align-content: space-between;\n}\n.elementor-field-type-radio.elementor-field-group.elementor-column.elementor-col-100.elementor-field-required {\n    gap: 26px;\n}\n\n#initialAssessmentEnglish .elementor-field-type-html label,#initialAssessmentMaths .elementor-field-type-html label, label.elementor-field-label {\n    font-size: 1.5em !important;\n    line-height: 1em !important;\n}\n\n\nlabel[for="form-field-IA_MATHS_QUESTION_11"].elementor-field-label {\n    display: flex;\n    flex-direction: row;\n    flex-wrap: wrap;\n    justify-content: flex-start;\n    align-items: center;\n    align-content: flex-start;\n}\n\n\n\n.elementor-field-group.elementor-colum.elementor-col-100.elementor-field-required:not(.elementor-field-group-email) {\n    min-height: 300px;\n    display: flex;\n    flex-direction: row;\n    justify-content: space-between;\n    flex-wrap: wrap;\n    align-content: center;\n    align-items: stretch;\n}\n\n.elementor-field-type-radio.elementor-field-group.elementor-column {\n    gap: 26px!important;\n}\n\n#initialAssessmentEnglish .elementor-field-type-html label,#initialAssessmentMaths .elementor-field-type-html label, label.elementor-field-label {\n    font-size: 1.5em !important;\n    line-height: 1em !important;\n}\n\n\nlabel[for="form-field-IA_MATHS_QUESTION_11"].elementor-field-label {\n    display: flex;\n    flex-direction: row;\n    flex-wrap: wrap;\n    justify-content: flex-start;\n    align-items: center;\n    align-content: flex-start;\n}\n\n\n\n.elementor-field-group.elementor-colum.elementor-col-100.elementor-field-required:not(.elementor-field-group-email) {\n    min-height: 300px;\n    display: flex;\n    flex-direction: row;\n    justify-content: space-between;\n    flex-wrap: wrap;\n    align-content: center;\n    align-items: stretch;\n}\n\n.elementor-field-type-radio.elementor-field-group.elementor-column {\n    gap: 26px!important;\n}\n\n.mymy{\n    text-decoration-thickness: 7px !important;\n    text-underline-offset: 10px;\n    text-decoration-color: #049b6a !important;\n}\n\n.elementor-field-type-upload.elementor-field-group.elementor-column, label.elementor-field-label,\n    label.elementor-field-label {\n   font-size: 90% !important; line-height: 1.35em !important; font-weight: 500!Important; text-transform: uppercase; letter-spacing: 0em; padding: 7px 0px; /* font-family: \'Poppins\', sans-serif !important; */ text-align: left;\n};\n   \ninput[data-gtm-form-interact-field-id] {\n    border-color: var(--e-global-color-f37af1a) !important;\n    cursor: pointer !important;\n}\n\n.elementor-field-type-html.elementor-field-group.elementor-column {\n    /* margin: 0; */\n    border-bottom: solid 7px #049b6a;\n    padding-left:0!important;\n            padding-right: calc(18px / 2);\n}\ninput[type="file" i] {\n\n}\n.elementor-field-type-html.elementor-field-group.elementor-column.elementor-col-100 h3 {\n    margin-bottom: 0;\n    padding: 7px 0px;\n}\n.elementor-field-group.elementor-column.elementor-field-type-html.elementor-col-100 {\n    padding-bottom: 16px;\n}\n.elementor-field-type-select.elementor-field-group.elementor-column, .elementor-field-type-select.elementor-field-group.elementor-column label {\n    padding-left: 0;\n            padding-right: calc(18px / 2);\n}\n\nh5.mymy {\n    text-transform: uppercase!important;\n}\n\n.elementor-field-type-select.elementor-field-group.elementor-column {\n    padding-left: 0!important;\n        padding-right: calc(18px / 2);\n}\n\n.elementor-field-type-textarea.elementor-field-group.elementor-column {\n    padding-left: 0 !important;\n}\n\n.elementor-field-type-text.elementor-field-group.elementor-column.elementor-field-required {\n    padding-left: 0 !important;\n            padding-right: calc(18px / 2);\n}\n\n.elementor-field-type-email.elementor-field-group.elementor-column {\n    padding-left: 0 !important;\n}\n\n.elementor-field-type-upload.elementor-field-group.elementor-column,label[for="form-field-proof_of_id"] {\n    padding-left: 0!important;\n}\n\n.elementor-field-type-upload.elementor-field-group.elementor-column.elementor-field-group-proof_of_id.elementor-col-100 {}\n\nlabel.elementor-field-label {\n    padding-left: 0;\n            padding-right: calc(18px / 2);\n}\n.elementor-field-group.elementor-column.elementor-field-type-submit.elementor-col-100.e-form__buttons {\n    padding: 0;\n    \n}\n.elementor-field-group.elementor-column.elementor-field-type-date.elementor-col-33.elementor-field-required {\n    padding-right: calc(18px / 2);\n}\n.elementor-form-fields-wrapper.elementor-labels-above {}\n.elementor-field-type-date.elementor-field-group.elementor-column {\n    padding-left: 0!important;\n}\n\n.elementor-field-type-checkbox.elementor-field-group.elementor-column {\n    border: none!important;\n}\n\n.elementor-field-type-checkbox.elementor-field-group.elementor-column {\n    padding-left: 0 !important;\n    margin-left:  0 !important;\n}\n.elementor-field-type-date.elementor-field-group.elementor-column {\n    padding-left: 0!Important;\n}\n.elementor-field-type-text.elementor-field-group.elementor-column {\n    padding-left: 0 !important;\n}\n.elementor-field-type-text.elementor-field-group.elementor-column.elementor-col-50,\n.elementor-field-type-date.elementor-field-group.elementor-column.elementor-col-50 {\n    padding-left: 0 !important;\n}\n\n.elementor-field-group.elementor-column.elementor-field-type-checkbox {\nborder:none!important;\nmargin-left:0!important;\npadding-left:0!important;\n}\n\n\n.elementor-field-group .elementor-field-textual::placeholder {\n    color: inherit;\n    font-family: inherit;\n    opacity: 1;\n}',
+            eael_ext_toc_title: 'Table of Contents',
+            content_type: 'landing-page',
+          },
+          version: '0.4',
+          title: pageTitle,
+          type: 'container',
+        };
+
+        // Display the output
+        displayOutput(elementorTemplate);
+        displayHubSpotOutput(selectedForm); // Display HubSpot form fields
+      }
+
+      function createElementorTemplate(form, pageTitle, webhookUrl) {
+        const elements = [];
+
+        // Add title
+        elements.push({
+          id: 'title',
+          settings: {
+            title: form.formFieldGroups[0].richText.content,
+            header_size: 'h3',
+            align: 'left',
+            title_color: '#FFFFFF',
+            _background_color: '#049B6A',
+          },
+          widgetType: 'heading',
+          elType: 'widget',
+        });
+
+        // Add form fields
+        form.formFieldGroups.forEach((group) => {
+          group.fields.forEach((field) => {
+            if (!field.hidden) {
+              const fieldElement = createFieldElement(field);
+              if (fieldElement) {
+                elements.push(fieldElement);
+              }
+            }
+          });
+        });
+
+        // Create the Elementor template object
+        const elementorTemplate = {
+          content: [
+            {
+              id: 'container',
+              settings: {
+                content_width: 'full',
+              },
+              elements: elements,
+              isInner: true,
+              elType: 'container',
+            },
+          ],
+          page_settings: {
+            title: pageTitle,
+            webhook_url: webhookUrl,
+          },
+          version: '0.4',
+          type: 'container',
+        };
+
+        // Filter out unsupported keys
+        const supportedKeys = ['content', 'page_settings', 'version', 'type'];
+        const filteredTemplate = Object.keys(elementorTemplate)
+          .filter((key) => supportedKeys.includes(key))
+          .reduce((obj, key) => {
+            obj[key] = elementorTemplate[key];
+            return obj;
+          }, {});
+
+        return filteredTemplate;
+      }
+
+      function createFieldElement(field) {
+        const fieldTypes = {
+          string: 'text',
+          enumeration: 'select',
+          date: 'date',
+          textarea: 'textarea',
+          phonenumber: 'phone',
+          file: 'file',
+          boolean: 'checkbox', // Adding support for boolean fields
+        };
+
+        const fieldType = fieldTypes[field.type] || null;
+
+        if (fieldType) {
+          const fieldElement = {
+            id: field.name,
+            settings: {
+              field_type: fieldType,
+              field_label: field.label,
+              required: field.required,
+              placeholder: field.placeholder || '',
+              field_options: field.options
+                .map((option) => `${option.label}|${option.value}`)
+                .join('\n'),
+              custom_id: field.name,
+              validation: field.validation ? field.validation.message : '',
+              help_text: field.description || '',
+            },
+            widgetType: 'form',
+            elType: 'widget',
+          };
+
+          // Handle default values
+          if (field.defaultValue) {
+            fieldElement.settings.default_value = field.defaultValue;
+          }
+
+          return fieldElement;
+        }
+        return null;
+      }
+
+      function generateConditionalFieldsConfig(form) {
+        const conditionalFields = [];
+        // Example configuration for conditional fields
+        form.formFieldGroups.forEach((group) => {
+          group.fields.forEach((field) => {
+            if (field.conditionalFieldFilters) {
+              conditionalFields.push({
+                selectSelector: `#form-field-${field.name}`,
+                targetFieldSelector: field.conditionalFieldFilters.map(
+                  (filter) => `.elementor-field-group-${filter.targetField}`
+                ),
+                triggerValue: field.conditionalFieldFilters.map(
+                  (filter) => filter.triggerValue
+                ),
+              });
+            }
+          });
+        });
+
+        return {
+          conditionalFields,
+        };
+      }
+
+      function displayHubSpotOutput(selectedForm) {
+        const hubspotOutput = document.getElementById('hubspotOutput');
+        hubspotOutput.textContent = ''; // Clear previous content
+        const editor = new JSONEditor(hubspotOutput, {
+          mode: 'code', // Set the editor mode to code
+          modes: ['code', 'form', 'text', 'tree', 'view', 'preview'], // Allowed modes
+        });
+        editor.set(selectedForm); // Load HubSpot form details into the editor
+      }
+
+      function displayOutput(elementorTemplate, conditionalFieldsConfig) {
+        const output = document.getElementById('output');
+        output.textContent = ''; // Clear previous content
+        const editor = new JSONEditor(output, {
+          mode: 'code', // Set the editor mode to code
+          modes: ['code', 'form', 'text', 'tree', 'view', 'preview'], // Allowed modes
+        });
+        editor.set(elementorTemplate); // Load Elementor template into the editor
+      }
+
+      document.addEventListener('DOMContentLoaded', () => {
+        fetchHubSpotForms(); // Fetch forms on page load
+      });
+    </script>
+  </head>
+  <body>
+    <h1>HubSpot to Elementor Form Generator</h1>
+    <button id="fetchFormsBtn" onclick="fetchHubSpotForms()">
+      Get All Forms
+    </button>
+    <select
+      id="formSelect"
+      placeholder="Select a form"
+      autocomplete="off"
+    ></select>
+    <button id="generateBtn" onclick="generateElementorTemplate()">
+      Generate Elementor Template
+    </button>
+    <div id="hubspotOutput" class="jsoneditor"></div>
+    <!-- HubSpot form fields preview -->
+    <div id="output" class="jsoneditor"></div>
+    <!-- Elementor template preview -->
+    <button id="downloadBtn">Download Elementor Template</button>
+  </body>
+</html>
