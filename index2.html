@@ -1,0 +1,91 @@
+<div class="flex flex-col p-4">
+    <div class="grid grid-cols-1 gap-4">
+        <div class="flex flex-col">
+            <div class="relative">
+                <input type="hidden" value="POST">
+                <div class="relative">
+                    <input class="block w-full border border-gray-300 rounded p-2" type="search" id="request-method" aria-autocomplete="list" readonly value="POST">
+                    <div class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                        <svg viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500">
+                            <path d="M4.93179 5.43179C4.75605 5.60753 4.75605 5.89245 4.93179 6.06819C5.10753 6.24392 5.39245 6.24392 5.56819 6.06819L7.49999 4.13638L9.43179 6.06819C9.60753 6.24392 9.89245 6.24392 10.0682 6.06819C10.2439 5.89245 10.2439 5.60753 10.0682 5.43179L7.81819 3.18179C7.73379 3.0974 7.61933 3.04999 7.49999 3.04999C7.38064 3.04999 7.26618 3.0974 7.18179 3.18179L4.93179 5.43179ZM10.0682 9.56819C10.2439 9.39245 10.2439 9.10753 10.0682 8.93179C9.89245 8.75606 9.60753 8.75606 9.43179 8.93179L7.49999 10.8636L5.56819 8.93179C5.39245 8.75606 5.10753 8.75606 4.93179 8.93179C4.75605 9.10753 4.75605 9.39245 4.93179 9.56819L7.18179 11.8182C7.35753 11.9939 7.64245 11.9939 7.81819 11.8182L10.0682 9.56819Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="relative mt-4">
+                <input class="block w-full border border-gray-300 rounded p-2" type="text" placeholder="URL" value="https://api.sampleapis.com/codingresources/codingResources">
+            </div>
+            <button class="mt-4 bg-blue-500 text-white font-semibold py-2 px-4 rounded hover:bg-blue-600" type="button">
+                Send Request
+            </button>
+            <div class="mt-4 flex space-x-2">
+                <label class="flex items-center">
+                    <input type="radio" name="response-type" value="content" class="mr-2" checked>
+                    <span>Content</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="radio" name="response-type" value="headers" class="mr-2">
+                    <span>Headers</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="radio" name="response-type" value="auth" class="mr-2">
+                    <span>Authorization</span>
+                </label>
+                <label class="flex items-center">
+                    <input type="radio" name="response-type" value="raw" class="mr-2">
+                    <span>Raw</span>
+                </label>
+            </div>
+            <label class="mt-4 block text-gray-700" for="content-type">Content-Type</label>
+            <div class="relative">
+                <input type="hidden" value="application/json">
+                <div class="relative">
+                    <input class="block w-full border border-gray-300 rounded p-2" type="search" id="content-type" readonly value="JSON (application/json)">
+                    <div class="absolute right-2 top-1/2 transform -translate-y-1/2">
+                        <svg viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-gray-500">
+                            <path d="M4.93179 5.43179C4.75605 5.60753 4.75605 5.89245 4.93179 6.06819C5.10753 6.24392 5.39245 6.24392 5.56819 6.06819L7.49999 4.13638L9.43179 6.06819C9.60753 6.24392 9.89245 6.24392 10.0682 6.06819C10.2439 5.89245 10.2439 5.60753 10.0682 5.43179L7.81819 3.18179C7.73379 3.0974 7.61933 3.04999 7.49999 3.04999C7.38064 3.04999 7.26618 3.0974 7.18179 3.18179L4.93179 5.43179ZM10.0682 9.56819C10.2439 9.39245 10.2439 9.10753 10.0682 8.93179C9.89245 8.75606 9.60753 8.75606 9.43179 8.93179L7.49999 10.8636L5.56819 8.93179C5.39245 8.75606 5.10753 8.75606 4.93179 8.93179C4.75605 9.10753 4.75605 9.39245 4.93179 9.56819L7.18179 11.8182C7.35753 11.9939 7.64245 11.9939 7.81819 11.8182L10.0682 9.56819Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-4 border border-gray-300 rounded p-4">
+                <div class="flex flex-col">
+                    <label class="block text-gray-700">Response:</label>
+                    <div class="mt-2">
+                        <span>Status: <span class="font-semibold text-green-600">200 OK</span></span>
+                        <span> Time: <span class="font-semibold text-green-600">404.2 ms</span></span>
+                    </div>
+                    <div class="mt-4 flex space-x-2">
+                        <label class="flex items-center">
+                            <input type="radio" name="response-content" value="content" class="mr-2" checked>
+                            <span>Content</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="response-content" value="headers" class="mr-2">
+                            <span>Headers</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="response-content" value="raw" class="mr-2">
+                            <span>Raw</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="response-content" value="json" class="mr-2">
+                            <span>JSON</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="response-content" value="timings" class="mr-2">
+                            <span>Timings</span>
+                        </label>
+                    </div>
+                    <label class="mt-4 block text-gray-700" for="response-content-type">Content-Type</label>
+                    <div class="relative">
+                        <input type="hidden" value="application/json">
+                        <div class="relative">
+                            <input class="block w-full border border-gray-300 rounded p-2" type="search" id="response-content-type" readonly value="JSON (application/json)">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
